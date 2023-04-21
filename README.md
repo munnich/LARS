@@ -17,6 +17,7 @@ python lars/lars.py
 1. Open an audio file, e.g. with the Ctrl+O shortcut.
 2. Adjust frame length and overlap if necessary.
 3. In the bottom right field, enter your label and press Enter to proceed to the next frame.
+4. Once you've finished labeling the entire file, a prompt will appear asking you to save to a CSV file.
 
 If you've already split the audio file into frames, you can load these as a CSV file via the option in the File menu.
 
