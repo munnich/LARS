@@ -27,7 +27,8 @@ class MainWindow(QMainWindow):
         self.frames = None
         self.frame_index = 0
 
-        self.data = pd.DataFrame(columns=["Start", "End", "Symbols"])
+        # all the labels entered so far
+        self.data = pd.DataFrame(columns=["Start", "End", "Labels"])
 
         self.setWindowTitle(self.abbreviation)
 
@@ -172,6 +173,9 @@ class MainWindow(QMainWindow):
         return
 
     def soft_reset(self):
+        """
+        Reset everything other than variables a user would've had to change from the original.
+        """
         self.position = 0
         self.previousSymbol = ""
         self.previousText = ""
@@ -183,6 +187,9 @@ class MainWindow(QMainWindow):
         return
 
     def reset(self):
+        """
+        Reset all variables.
+        """
         self.fname = ""
         self.fs = 44100
         self.audio_full = np.array([])
@@ -198,9 +205,16 @@ class MainWindow(QMainWindow):
         return
 
     def get_icon(self, name):
+        """
+        Get Qt icons by name.
+        See https://doc.qt.io/qt-6/qstyle.html#StandardPixmap-enum for names.
+        """
         return self.style().standardIcon(getattr(QStyle.StandardPixmap, name))
 
     def onFileToolClick(self):
+        """
+        Open a new audio file.
+        """
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Select a File",
@@ -219,6 +233,9 @@ class MainWindow(QMainWindow):
         return
 
     def audio_step(self):
+        """
+        Step forward one frame length in audio.
+        """
         start = max(self.position - self.overlap, 0)
         end = min(self.position + self.frame_length + self.overlap, len(self.audio_full) - 1)
         self.audio = self.audio_full[start:end]
@@ -228,10 +245,16 @@ class MainWindow(QMainWindow):
         return
 
     def play_sound(self):
+        """
+        Play current frame.
+        """
         sd.play(self.audio, self.fs)
         return
 
     def update_plots(self):
+        """
+        Update the plot widgets with current frame.
+        """
         self.graphWidget.clear()
         self.graphWidget.plot(np.linspace(max(self.position - self.overlap, 0), self.position + len(self.audio), num=len(self.audio)), self.audio.flatten())
 
@@ -244,6 +267,9 @@ class MainWindow(QMainWindow):
         return
 
     def step_forward(self):
+        """
+        Step one frame forward.
+        """
         if self.frames is None:
             self.position += self.frame_length
             self.position = min(self.position, len(self.audio_full) - 1)
@@ -258,6 +284,9 @@ class MainWindow(QMainWindow):
         return
 
     def step_backward(self):
+        """
+        Step one frame backwards, removing the previous text.
+        """
         if self.frames is None:
             self.position -= self.frame_length
             self.position = max(self.position, 0)
@@ -266,6 +295,9 @@ class MainWindow(QMainWindow):
             self.position = self.frames[self.frame_index][0]
             self.frame_length = self.frames[self.frame_index][1] - self.position
         self.audio_step()
+        # temporarily update previousSymbol with last data entry label
+        # this enables multiple steps back
+        self.previousSymbol = self.data.iloc[-1]["Labels"]
         self.previousText = self.previousText[:-len(self.previousSymbol)]
         self.previousSymbol = ""
         self.update_previous()
@@ -273,6 +305,9 @@ class MainWindow(QMainWindow):
         return
 
     def update_previous(self):
+        """
+        Add new label to displayed text and trim if necessary.
+        """
         self.previousText += self.previousSymbol
         if len(self.previousText) > 20:
             self.previousText = self.previousText[-20:]
@@ -280,10 +315,13 @@ class MainWindow(QMainWindow):
         return
 
     def set_entry(self):
+        """
+        Set label for current frame. If current frame is the last frame, a save prompt is opened.
+        """
         self.previousSymbol = self.entryBox.text()
         if self.previousSymbol == "":
             self.previousSymbol = " "
-        new_row = pd.DataFrame([{"Start": self.position, "End": min(self.position + self.frame_length, len(self.audio_full)), "Symbols": self.previousSymbol}])
+        new_row = pd.DataFrame([{"Start": self.position, "End": min(self.position + self.frame_length, len(self.audio_full)), "Labels": self.previousSymbol}])
         self.data = pd.concat([self.data, new_row])
         self.update_previous()
         self.entryBox.clear()
@@ -294,6 +332,9 @@ class MainWindow(QMainWindow):
         return
 
     def on_done(self):
+        """
+        Open save prompt if audio file is fully labeled.
+        """
         shouldSave = QMessageBox(self)
         shouldSave.setWindowTitle("Done!")
         shouldSave.setText("You have labeled all segments. Would you like to save your labels to a CSV?")
@@ -304,11 +345,17 @@ class MainWindow(QMainWindow):
         return
 
     def update_frame_length(self):
+        """
+        Frame length changed by user.
+        """
         self.frame_length = self.frameLengthBox.value()
         self.soft_reset()
         return
 
     def update_overlap(self):
+        """
+        Overlap changed by user.
+        """
         self.overlap = self.overlapBox.value()
         self.soft_reset()
         return
@@ -318,10 +365,17 @@ class MainWindow(QMainWindow):
     #     return
 
     def about(self):
+        """
+        About box.
+        Mostly a placeholder.
+        """
         QMessageBox.about(self, "About " + self.title, f"{self.title} ({self.abbreviation}) is GNU GPLv3-licensed and was written in Python utilizing the following nonstandard libraries: NumPy, Pandas, PyQt6, pyqtgraph, scipy, sounddevice, soundfile.\n\nAuthors:\nPatrick Munnich.")
         return
 
     def saveCSV(self):
+        """
+        Save labels to CSV file.
+        """
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save File",
@@ -335,6 +389,9 @@ class MainWindow(QMainWindow):
         return
 
     def load_frames(self):
+        """
+        Load a CSV file containing frames for audio file.
+        """
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Select Frames File",
