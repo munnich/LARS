@@ -266,10 +266,10 @@ class MainWindow(QMainWindow):
             self.position = self.frames[self.frame_index][0]
             self.frame_length = self.frames[self.frame_index][1] - self.position
         self.audio_step()
-        # previousText doesn't get updated properly?
-        self.previousText = self.previousText[-len(self.previousSymbol):]
+        self.previousText = self.previousText[:-len(self.previousSymbol)]
         self.previousSymbol = ""
         self.update_previous()
+        self.data = self.data[:-1]
         return
 
     def update_previous(self):
