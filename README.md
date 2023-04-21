@@ -3,13 +3,13 @@
 ## Installing requirements
 
 ```
-pip install -Ur requirements.txt
+pip install -Ur src/requirements.txt
 ```
 
 ## Running
 
 ```
-python lars/lars.py
+python src/lars.py
 ```
 
 ## Usage
