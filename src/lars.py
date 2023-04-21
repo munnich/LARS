@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
             self.audio_full, self.fs = sf.read(str(path))
             if np.size(self.audio_full, 1) == 2:
                 self.audio_full = (self.audio_full[:, 0] + self.audio_full[:, 1]) / 2
-            self.fnameLabel.setText("Current file: " + str(self.fname))
+            self.fnameLabel.setText(f"Current file: {self.fname} ({self.fs} Hz)")
             self.audio_step()
         return
 
