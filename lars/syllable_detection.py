@@ -72,10 +72,10 @@ def syllable_detection(audio, fs: int, frame_length: int = 150, overlap: int = 1
     zcrs = np.sum(sgn, axis=0)
 
     # thresholds
-    ste_min = min(stes)
-    ste_max = max(stes) / 4
-    zcr_min = min(zcrs)
-    zcr_max = max(zcrs) / 4
+    ste_min = np.min(stes)
+    ste_max = np.max(stes) / 4
+    zcr_min = np.min(zcrs)
+    zcr_max = np.max(zcrs) / 4
 
     N = len(zcrs)
     n = init_n = 0

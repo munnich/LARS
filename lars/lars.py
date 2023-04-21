@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtGui import QAction, QKeySequence, QIcon
+from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
 from pathlib import Path
 import soundfile as sf
@@ -7,7 +7,7 @@ import numpy as np
 import pyqtgraph as pg
 import sounddevice as sd
 import pandas as pd
-from syllable_detection import syllable_detection
+# from syllable_detection import syllable_detection
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -86,21 +86,31 @@ class MainWindow(QMainWindow):
         helpMenu = menu.addMenu("Help")
 
         # file picking
-        filePicker = QAction(QIcon("🗁"), "Open File", self)
+        filePicker = QAction(self.get_icon("SP_DirOpenIcon"), "Open File", self)
         filePicker.setStatusTip("Choose audio file to process")
         filePicker.triggered.connect(self.onFileToolClick)
         filePicker.setShortcut(QKeySequence("Ctrl+o"))
         fileMenu.addAction(filePicker)
 
         # save
-        saveAction = QAction(QIcon("🖫"), "Save File", self)
+        saveAction = QAction(self.get_icon("SP_DriveFDIcon"), "Save File", self)
         saveAction.setStatusTip("Save segment labels to CSV")
         saveAction.triggered.connect(self.saveCSV)
         saveAction.setShortcut(QKeySequence("Ctrl+s"))
         fileMenu.addAction(saveAction)
 
+        fileMenu.addSeparator()
+
+        # loading a frames file
+        loadFramesAction = QAction(self.get_icon("SP_FileDialogDetailedView"), "Load frames",self)
+        loadFramesAction.setStatusTip("Load frames file")
+        loadFramesAction.triggered.connect(self.load_frames)
+        fileMenu.addAction(loadFramesAction)
+
+        fileMenu.addSeparator()
+
         # quit
-        quitAction = QAction("Quit", self)
+        quitAction = QAction(self.get_icon("SP_TitleBarCloseButton"), "Quit", self)
         quitAction.triggered.connect(QCoreApplication.instance().quit)
         quitAction.triggered.connect(self.close)
         quitAction.setShortcut(QKeySequence("Ctrl+q"))
@@ -121,16 +131,15 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
         # file picking
-        filePickerButton = QAction(self.get_icon("SP_DirOpenIcon"), "Open file",  self)
-        filePickerButton .setStatusTip("Choose audio file to process")
-        filePickerButton .triggered.connect(self.onFileToolClick)
-        toolbar.addAction(filePickerButton)
+        toolbar.addAction(filePicker)
 
         # save
-        saveButton = QAction(self.get_icon("SP_DriveFDIcon"), "Save file", self)
-        saveButton.setStatusTip("Save to CSV")
-        saveButton.triggered.connect(self.saveCSV)
-        toolbar.addAction(saveButton)
+        toolbar.addAction(saveAction)
+
+        # loading a frames file
+        toolbar.addAction(loadFramesAction)
+
+        toolbar.addSeparator()
 
         # play sound
         playButton = QAction(self.get_icon("SP_MediaPlay"), "Play frame", self)
@@ -146,23 +155,11 @@ class MainWindow(QMainWindow):
         bwdButton.setShortcut(QKeySequence("Backspace"))
         toolbar.addAction(bwdButton)
 
-        loadFramesButton = QAction(self.get_icon("SP_FileIcon"), "Load frames",self)
-        loadFramesButton.setStatusTip("Load frames file")
-        loadFramesButton.triggered.connect(self.load_frames)
-        toolbar.addAction(loadFramesButton)
-
-        # automatic estimation via speed processing (placeholder)
-        estimationButton = QAction(self.get_icon("SP_FileLinkIcon"), "Estimate frames", self)
-        estimationButton.setStatusTip("Estimate frames")
-        estimationButton.triggered.connect(self.frames_estimation)
-        toolbar.addAction(estimationButton)
-
-        # # step forward
-        # fwdButton = QAction("⏭", self)
-        # fwdButton.setStatusTip("Step one frame forward")
-        # fwdButton.triggered.connect(self.step_forward)
-        # fwdButton.setShortcut(QKeySequence("Ctrl+Return"))
-        # toolbar.addAction(fwdButton)
+        # # automatic estimation via syllable detection (doesn't really work yet)
+        # estimationButton = QAction(self.get_icon("SP_BrowserReload"), "Estimate frames", self)
+        # estimationButton.setStatusTip("Estimate frames")
+        # estimationButton.triggered.connect(self.frames_estimation)
+        # toolbar.addAction(estimationButton)
 
         self.setStatusBar(QStatusBar(self))
 
@@ -316,9 +313,9 @@ class MainWindow(QMainWindow):
         self.soft_reset()
         return
 
-    def frames_estimation(self):
-        print(syllable_detection(self.audio_full, self.fs))
-        return
+    # def frames_estimation(self):
+    #     print(syllable_detection(self.audio_full, self.fs))
+    #     return
 
     def about(self):
         QMessageBox.about(self, "About " + self.title, f"{self.title} ({self.abbreviation}) is GNU GPLv3-licensed and was written in Python utilizing the following nonstandard libraries: NumPy, Pandas, PyQt6, pyqtgraph, scipy, sounddevice, soundfile.\n\nAuthors:\nPatrick Munnich.")
