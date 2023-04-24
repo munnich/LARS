@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
 from pathlib import Path
@@ -71,9 +71,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.fftWidget, 3, 1)
 
         # entry
+        self.numberOfVisibleLabels = 70
         self.previousSymbol = ""
         self.previousText = ""
         self.previousBox = QLabel(self.previousText)
+        self.previousBox.setAlignment(Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.previousBox, 4, 0)
 
         self.entryBox = QLineEdit()
@@ -308,9 +310,9 @@ class MainWindow(QMainWindow):
         """
         Add new label to displayed text and trim if necessary.
         """
-        self.previousText += self.previousSymbol
-        if len(self.previousText) > 20:
-            self.previousText = self.previousText[-20:]
+        self.previousText += self.previousSymbol + "|"
+        if len(self.previousText) > self.numberOfVisibleLabels:
+            self.previousText = self.previousText[-self.numberOfVisibleLabels:]
         self.previousBox.setText(self.previousText)
         return
 
@@ -357,7 +359,7 @@ class MainWindow(QMainWindow):
         Overlap changed by user.
         """
         self.overlap = self.overlapBox.value()
-        self.soft_reset()
+        self.audio_step()
         return
 
     # def frames_estimation(self):
