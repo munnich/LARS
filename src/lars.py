@@ -258,11 +258,11 @@ class MainWindow(QMainWindow):
         Update the plot widgets with current frame.
         """
         self.graphWidget.clear()
-        self.graphWidget.plot(np.linspace(max(self.position - self.overlap, 0), self.position + len(self.audio), num=len(self.audio)), self.audio.flatten())
+        self.graphWidget.plot(np.linspace(max(self.position - self.overlap, 0), min(len(self.audio_full) - 1, self.position + self.frame_length + self.overlap), num=len(self.audio)), self.audio.flatten())
         if self.overlap:
             if self.position > 0:
                 self.graphWidget.addItem(pg.InfiniteLine(pos=self.position, label="Previous Frame", labelOpts={"position": 0.1}))
-            if self.position + self.frame_length < len(self.audio_full):
+            if self.position + self.frame_length < len(self.audio_full) - 1:
                 self.graphWidget.addItem(pg.InfiniteLine(pos=self.position + self.frame_length, label="Next Frame", labelOpts={"position": 0.1}))
 
         self.fftWidget.clear()
