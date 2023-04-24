@@ -259,11 +259,16 @@ class MainWindow(QMainWindow):
         """
         self.graphWidget.clear()
         self.graphWidget.plot(np.linspace(max(self.position - self.overlap, 0), self.position + len(self.audio), num=len(self.audio)), self.audio.flatten())
+        if self.overlap:
+            if self.position > 0:
+                self.graphWidget.addItem(pg.InfiniteLine(pos=self.position, label="Previous Frame", labelOpts={"position": 0.1}))
+            if self.position + self.frame_length < len(self.audio_full):
+                self.graphWidget.addItem(pg.InfiniteLine(pos=self.position + self.frame_length, label="Next Frame", labelOpts={"position": 0.1}))
 
         self.fftWidget.clear()
         # if the audio is all zeros this will error but we can just keep a cleared graph
         try:
-            self.fftWidget.plot(np.abs(np.fft.fft(self.audio, n=self.fs)).flatten()[:round(self.fs / 2)])
+            self.fftWidget.plot(np.abs(np.fft.fft(self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)], n=self.fs)).flatten()[:round(self.fs / 2)])
         except ValueError:
             pass
         return
