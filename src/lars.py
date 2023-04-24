@@ -266,11 +266,9 @@ class MainWindow(QMainWindow):
                 self.graphWidget.addItem(pg.InfiniteLine(pos=self.position + self.frame_length, label="Next Frame", labelOpts={"position": 0.1}))
 
         self.fftWidget.clear()
-        # if the audio is all zeros this will error but we can just keep a cleared graph
-        try:
-            self.fftWidget.plot(np.abs(np.fft.fft(self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)], n=self.fs)).flatten()[:round(self.fs / 2)])
-        except ValueError:
-            pass
+        fftsegment = self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)]
+        if max(fftsegment) > 0:
+            self.fftWidget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
         return
 
     def step_forward(self):
