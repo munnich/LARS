@@ -9,6 +9,22 @@ import sounddevice as sd
 import pandas as pd
 # from syllable_detection import syllable_detection
 
+class AudioParamSpinBox(QSpinBox):
+    """
+    Spin box for audio parameters.
+    """
+    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=1000, param_maximum=int(1e6)):
+        super().__init__()
+        self.setPrefix(prefix)
+        self.setSuffix(suffix)
+        self.setMinimum(0)
+        self.setMaximum(param_maximum)
+        self.setValue(parameter)
+        self.setSingleStep(step_size)
+        self.valueChanged.connect(update_parameter)
+        return
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -41,25 +57,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.fnameLabel, 0, 0)
 
         # parameter spin boxes
-        param_maximum = int(1e6)
-        self.frame_length_box = QSpinBox()
-        self.frame_length_box.setPrefix("Frame length: ")
-        self.frame_length_box.setSuffix(" Samples")
-        self.frame_length_box.setMinimum(0)
-        self.frame_length_box.setMaximum(param_maximum)
-        self.frame_length_box.setValue(self.frame_length)
-        self.frame_length_box.setSingleStep(1000)
-        self.frame_length_box.valueChanged.connect(self.update_frame_length)
+        self.frame_length_box = AudioParamSpinBox(self.frame_length, self.update_frame_length, "Frame length: ", " Samples")
         layout.addWidget(self.frame_length_box, 1, 0)
 
-        self.overlap_box = QSpinBox()
-        self.overlap_box.setPrefix("Overlap: ")
-        self.overlap_box.setSuffix(" Samples")
-        self.overlap_box.setMinimum(0)
-        self.overlap_box.setMaximum(param_maximum)
-        self.overlap_box.setValue(self.overlap)
-        self.overlap_box.setSingleStep(1000)
-        self.overlap_box.valueChanged.connect(self.update_overlap)
+        self.overlap_box = AudioParamSpinBox(self.overlap, self.update_overlap, "Overlap: ", " Samples")
         layout.addWidget(self.overlap_box, 1, 1)
 
         # progress bar
@@ -199,7 +200,7 @@ class MainWindow(QMainWindow):
         self.fs = 44100
         self.audio_full = np.array([])
         self.audio= np.array([])
-        self.frame_length = round(self.fs)
+        self.frame_length = round(self.fs / 2)
         self.overlap = 0
         self.position = 0
         self.previous_symbol = ""
