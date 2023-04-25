@@ -41,11 +41,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.fnameLabel, 0, 0)
 
         # parameter spin boxes
+        param_maximum = int(1e6)
         self.frameLengthBox = QSpinBox()
         self.frameLengthBox.setPrefix("Frame length: ")
         self.frameLengthBox.setSuffix(" Samples")
         self.frameLengthBox.setMinimum(0)
-        self.frameLengthBox.setMaximum(50000)
+        self.frameLengthBox.setMaximum(param_maximum)
         self.frameLengthBox.setValue(self.frame_length)
         self.frameLengthBox.valueChanged.connect(self.update_frame_length)
         layout.addWidget(self.frameLengthBox, 1, 0)
@@ -54,7 +55,7 @@ class MainWindow(QMainWindow):
         self.overlapBox.setPrefix("Overlap: ")
         self.overlapBox.setSuffix(" Samples")
         self.overlapBox.setMinimum(0)
-        self.overlapBox.setMaximum(50000)
+        self.overlapBox.setMaximum(param_maximum)
         self.overlapBox.setValue(self.overlap)
         self.overlapBox.valueChanged.connect(self.update_overlap)
         layout.addWidget(self.overlapBox, 1, 1)
@@ -354,7 +355,9 @@ class MainWindow(QMainWindow):
         Frame length changed by user.
         """
         self.frame_length = self.frameLengthBox.value()
-        self.soft_reset()
+        # I DON'T KNOW IF THIS WILL WORK FINE WILL NEED TO TEST MORE
+        self.audio_step()
+        # self.soft_reset()
         return
 
     def update_overlap(self):
@@ -381,6 +384,8 @@ class MainWindow(QMainWindow):
         """
         Save labels to CSV file.
         """
+        # need something here
+        # if not self.fname:
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save File",

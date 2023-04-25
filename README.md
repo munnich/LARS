@@ -15,7 +15,7 @@ python src/lars.py
 ## Usage
 
 1. Open an audio file, e.g. with the Ctrl+O shortcut.
-2. Adjust frame length and overlap if necessary. WARNING: re-adjusting these parameters will fully reset your progress!
+2. Adjust frame length and overlap if necessary. 
 3. In the bottom right field, enter your label and press Enter to proceed to the next frame.
 4. Once you've finished labeling the entire file, a prompt will appear asking you to save to a CSV file.
 
