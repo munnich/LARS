@@ -42,122 +42,124 @@ class MainWindow(QMainWindow):
 
         # parameter spin boxes
         param_maximum = int(1e6)
-        self.frameLengthBox = QSpinBox()
-        self.frameLengthBox.setPrefix("Frame length: ")
-        self.frameLengthBox.setSuffix(" Samples")
-        self.frameLengthBox.setMinimum(0)
-        self.frameLengthBox.setMaximum(param_maximum)
-        self.frameLengthBox.setValue(self.frame_length)
-        self.frameLengthBox.valueChanged.connect(self.update_frame_length)
-        layout.addWidget(self.frameLengthBox, 1, 0)
+        self.frame_length_box = QSpinBox()
+        self.frame_length_box.setPrefix("Frame length: ")
+        self.frame_length_box.setSuffix(" Samples")
+        self.frame_length_box.setMinimum(0)
+        self.frame_length_box.setMaximum(param_maximum)
+        self.frame_length_box.setValue(self.frame_length)
+        self.frame_length_box.setSingleStep(1000)
+        self.frame_length_box.valueChanged.connect(self.update_frame_length)
+        layout.addWidget(self.frame_length_box, 1, 0)
 
-        self.overlapBox = QSpinBox()
-        self.overlapBox.setPrefix("Overlap: ")
-        self.overlapBox.setSuffix(" Samples")
-        self.overlapBox.setMinimum(0)
-        self.overlapBox.setMaximum(param_maximum)
-        self.overlapBox.setValue(self.overlap)
-        self.overlapBox.valueChanged.connect(self.update_overlap)
-        layout.addWidget(self.overlapBox, 1, 1)
+        self.overlap_box = QSpinBox()
+        self.overlap_box.setPrefix("Overlap: ")
+        self.overlap_box.setSuffix(" Samples")
+        self.overlap_box.setMinimum(0)
+        self.overlap_box.setMaximum(param_maximum)
+        self.overlap_box.setValue(self.overlap)
+        self.overlap_box.setSingleStep(1000)
+        self.overlap_box.valueChanged.connect(self.update_overlap)
+        layout.addWidget(self.overlap_box, 1, 1)
 
         # progress bar
-        self.progressBar = QProgressBar(self)
-        layout.addWidget(self.progressBar, 2, 0, 1, 2)
+        self.progress_bar = QProgressBar(self)
+        layout.addWidget(self.progress_bar, 2, 0, 1, 2)
 
         # plotting objects
-        self.graphWidget = pg.PlotWidget()
-        layout.addWidget(self.graphWidget, 3, 0)
+        self.graph_widget = pg.PlotWidget()
+        layout.addWidget(self.graph_widget, 3, 0)
 
-        self.fftWidget = pg.PlotWidget()
-        layout.addWidget(self.fftWidget, 3, 1)
+        self.fft_widget = pg.PlotWidget()
+        layout.addWidget(self.fft_widget, 3, 1)
 
         # entry
-        self.numberOfVisibleLabels = 70
-        self.previousSymbol = ""
-        self.previousText = ""
-        self.previousBox = QLabel(self.previousText)
-        self.previousBox.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(self.previousBox, 4, 0)
+        self.number_of_visible_labels = 70
+        self.previous_symbol = ""
+        self.previous_text = ""
+        self.previous_box = QLabel(self.previous_text)
+        self.previous_box.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(self.previous_box, 4, 0)
 
-        self.entryBox = QLineEdit()
-        self.entryBox.setPlaceholderText("Current symbol(s)")
-        self.entryBox.returnPressed.connect(self.set_entry)
-        layout.addWidget(self.entryBox, 4, 1)
+        self.entry_box = QLineEdit()
+        self.entry_box.setPlaceholderText("Current symbol(s)")
+        self.entry_box.returnPressed.connect(self.set_entry)
+        layout.addWidget(self.entry_box, 4, 1)
 
         # menu
         menu = self.menuBar()
-        fileMenu = menu.addMenu("File")
-        helpMenu = menu.addMenu("Help")
+        file_menu = menu.addMenu("File")
+        help_menu = menu.addMenu("Help")
 
         # file picking
-        filePicker = QAction(self.get_icon("SP_DirOpenIcon"), "Open File", self)
-        filePicker.setStatusTip("Choose audio file to process")
-        filePicker.triggered.connect(self.onFileToolClick)
-        filePicker.setShortcut(QKeySequence("Ctrl+o"))
-        fileMenu.addAction(filePicker)
+        file_picker = QAction(self.get_icon("SP_DirOpenIcon"), "Open File", self)
+        file_picker.setStatusTip("Choose audio file to process")
+        file_picker.triggered.connect(self.on_file_tool_click)
+        file_picker.setShortcut(QKeySequence("Ctrl+o"))
+        file_menu.addAction(file_picker)
 
         # save
-        saveAction = QAction(self.get_icon("SP_DriveFDIcon"), "Save File", self)
-        saveAction.setStatusTip("Save segment labels to CSV")
-        saveAction.triggered.connect(self.saveCSV)
-        saveAction.setShortcut(QKeySequence("Ctrl+s"))
-        fileMenu.addAction(saveAction)
+        save_action = QAction(self.get_icon("SP_DriveFDIcon"), "Save File", self)
+        save_action.setStatusTip("Save segment labels to CSV")
+        save_action.triggered.connect(self.saveCSV)
+        save_action.setShortcut(QKeySequence("Ctrl+s"))
+        file_menu.addAction(save_action)
 
-        fileMenu.addSeparator()
+        file_menu.addSeparator()
 
         # loading a frames file
-        loadFramesAction = QAction(self.get_icon("SP_FileDialogDetailedView"), "Load frames",self)
-        loadFramesAction.setStatusTip("Load frames file")
-        loadFramesAction.triggered.connect(self.load_frames)
-        fileMenu.addAction(loadFramesAction)
+        load_frames_action = QAction(self.get_icon("SP_FileDialogDetailedView"), "Load frames",self)
+        load_frames_action.setStatusTip("Load frames file")
+        load_frames_action.triggered.connect(self.load_frames)
+        file_menu.addAction(load_frames_action)
 
-        fileMenu.addSeparator()
+        file_menu.addSeparator()
 
         # quit
-        quitAction = QAction(self.get_icon("SP_TitleBarCloseButton"), "Quit", self)
-        quitAction.triggered.connect(QCoreApplication.instance().quit)
-        quitAction.triggered.connect(self.close)
-        quitAction.setShortcut(QKeySequence("Ctrl+q"))
-        fileMenu.addAction(quitAction)
+        quit_action = QAction(self.get_icon("SP_TitleBarCloseButton"), "Quit", self)
+        quit_action.triggered.connect(QCoreApplication.instance().quit)
+        quit_action.triggered.connect(self.close)
+        quit_action.setShortcut(QKeySequence("Ctrl+q"))
+        file_menu.addAction(quit_action)
 
         # about
-        aboutAction = QAction(f"About {self.abbreviation}", self)
-        aboutAction.triggered.connect(self.about)
-        helpMenu.addAction(aboutAction)
+        about_action = QAction(f"About {self.abbreviation}", self)
+        about_action.triggered.connect(self.about)
+        help_menu.addAction(about_action)
 
         # # how to
         # usageAction = QAction("Usage", self)
         # usageAction.triggered.connect(self.usage)
-        # helpMenu.addAction(usageAction)
+        # help_menu.addAction(usageAction)
 
         # toolbar
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
 
         # file picking
-        toolbar.addAction(filePicker)
+        toolbar.addAction(file_picker)
 
         # save
-        toolbar.addAction(saveAction)
+        toolbar.addAction(save_action)
 
         # loading a frames file
-        toolbar.addAction(loadFramesAction)
+        toolbar.addAction(load_frames_action)
 
         toolbar.addSeparator()
 
         # play sound
-        playButton = QAction(self.get_icon("SP_MediaPlay"), "Play frame", self)
-        playButton.setStatusTip("Play audio frame")
-        playButton.triggered.connect(self.play_sound)
-        playButton.setShortcut(QKeySequence("Ctrl+p"))
-        toolbar.addAction(playButton)
+        play_button = QAction(self.get_icon("SP_MediaPlay"), "Play frame", self)
+        play_button.setStatusTip("Play audio frame")
+        play_button.triggered.connect(self.play_sound)
+        play_button.setShortcut(QKeySequence("Ctrl+p"))
+        toolbar.addAction(play_button)
 
         # step backward
-        bwdButton = QAction(self.get_icon("SP_MediaSkipBackward"), "Step one frame back", self)
-        bwdButton.setStatusTip("Step one frame backwards")
-        bwdButton.triggered.connect(self.step_backward)
-        bwdButton.setShortcut(QKeySequence("Backspace"))
-        toolbar.addAction(bwdButton)
+        bwd_button = QAction(self.get_icon("SP_MediaSkipBackward"), "Step one frame back", self)
+        bwd_button.setStatusTip("Step one frame backwards")
+        bwd_button.triggered.connect(self.step_backward)
+        bwd_button.setShortcut(QKeySequence("Backspace"))
+        toolbar.addAction(bwd_button)
 
         # # automatic estimation via syllable detection (doesn't really work yet)
         # estimationButton = QAction(self.get_icon("SP_BrowserReload"), "Estimate frames", self)
@@ -180,12 +182,12 @@ class MainWindow(QMainWindow):
         Reset everything other than variables a user would've had to change from the original.
         """
         self.position = 0
-        self.previousSymbol = ""
-        self.previousText = ""
-        self.graphWidget.clear()
-        self.fftWidget.clear()
-        self.previousBox.clear()
-        self.entryBox.clear()
+        self.previous_symbol = ""
+        self.previous_text = ""
+        self.graph_widget.clear()
+        self.fft_widget.clear()
+        self.previous_box.clear()
+        self.entry_box.clear()
         self.audio_step()
         return
 
@@ -200,11 +202,11 @@ class MainWindow(QMainWindow):
         self.frame_length = round(self.fs)
         self.overlap = 0
         self.position = 0
-        self.previousSymbol = ""
-        self.previousText = ""
-        self.graphWidget.clear()
-        self.fftWidget.clear()
-        self.previousBox.clear()
+        self.previous_symbol = ""
+        self.previous_text = ""
+        self.graph_widget.clear()
+        self.fft_widget.clear()
+        self.previous_box.clear()
         return
 
     def get_icon(self, name):
@@ -214,7 +216,7 @@ class MainWindow(QMainWindow):
         """
         return self.style().standardIcon(getattr(QStyle.StandardPixmap, name))
 
-    def onFileToolClick(self):
+    def on_file_tool_click(self):
         """
         Open a new audio file.
         """
@@ -244,7 +246,7 @@ class MainWindow(QMainWindow):
         self.audio = self.audio_full[start:end]
         self.play_sound()
         self.update_plots()
-        self.progressBar.setValue(int((self.position) / (len(self.audio_full) - self.frame_length) * 100))
+        self.progress_bar.setValue(int((self.position) / (len(self.audio_full) - self.frame_length) * 100))
         return
 
     def play_sound(self):
@@ -258,18 +260,18 @@ class MainWindow(QMainWindow):
         """
         Update the plot widgets with current frame.
         """
-        self.graphWidget.clear()
-        self.graphWidget.plot(np.linspace(max(self.position - self.overlap, 0), min(len(self.audio_full) - 1, self.position + self.frame_length + self.overlap), num=len(self.audio)), self.audio.flatten())
+        self.graph_widget.clear()
+        self.graph_widget.plot(np.linspace(max(self.position - self.overlap, 0), min(len(self.audio_full) - 1, self.position + self.frame_length + self.overlap), num=len(self.audio)), self.audio.flatten())
         if self.overlap:
             if self.position > 0:
-                self.graphWidget.addItem(pg.InfiniteLine(pos=self.position, label="Previous Frame", labelOpts={"position": 0.1}))
+                self.graph_widget.addItem(pg.InfiniteLine(pos=self.position, label="Previous Frame", labelOpts={"position": 0.1}))
             if self.position + self.frame_length < len(self.audio_full) - 1:
-                self.graphWidget.addItem(pg.InfiniteLine(pos=self.position + self.frame_length, label="Next Frame", labelOpts={"position": 0.1}))
+                self.graph_widget.addItem(pg.InfiniteLine(pos=self.position + self.frame_length, label="Next Frame", labelOpts={"position": 0.1}))
 
-        self.fftWidget.clear()
+        self.fft_widget.clear()
         fftsegment = self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)]
         if max(fftsegment) > 0:
-            self.fftWidget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
+            self.fft_widget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
         return
 
     def step_forward(self):
@@ -301,11 +303,11 @@ class MainWindow(QMainWindow):
             self.position = self.frames[self.frame_index][0]
             self.frame_length = self.frames[self.frame_index][1] - self.position
         self.audio_step()
-        # temporarily update previousSymbol with last data entry label
+        # temporarily update previous_symbol with last data entry label
         # this enables multiple steps back
-        self.previousSymbol = self.data.iloc[-1]["Labels"]
-        self.previousText = self.previousText[:-len(self.previousSymbol)]
-        self.previousSymbol = ""
+        self.previous_symbol = self.data.iloc[-1]["Labels"]
+        self.previous_text = self.previous_text[:-len(self.previous_symbol)]
+        self.previous_symbol = ""
         self.update_previous()
         self.data = self.data[:-1]
         return
@@ -314,23 +316,23 @@ class MainWindow(QMainWindow):
         """
         Add new label to displayed text and trim if necessary.
         """
-        self.previousText += self.previousSymbol + "|"
-        if len(self.previousText) > self.numberOfVisibleLabels:
-            self.previousText = self.previousText[-self.numberOfVisibleLabels:]
-        self.previousBox.setText(self.previousText)
+        self.previous_text += self.previous_symbol + "|"
+        if len(self.previous_text) > self.number_of_visible_labels:
+            self.previous_text = self.previous_text[-self.number_of_visible_labels:]
+        self.previous_box.setText(self.previous_text)
         return
 
     def set_entry(self):
         """
         Set label for current frame. If current frame is the last frame, a save prompt is opened.
         """
-        self.previousSymbol = self.entryBox.text()
-        if self.previousSymbol == "":
-            self.previousSymbol = " "
-        new_row = pd.DataFrame([{"Start": self.position, "End": min(self.position + self.frame_length, len(self.audio_full)), "Labels": self.previousSymbol}])
+        self.previous_symbol = self.entry_box.text()
+        if self.previous_symbol == "":
+            self.previous_symbol = " "
+        new_row = pd.DataFrame([{"Start": self.position, "End": min(self.position + self.frame_length, len(self.audio_full)), "Labels": self.previous_symbol}])
         self.data = pd.concat([self.data, new_row])
         self.update_previous()
-        self.entryBox.clear()
+        self.entry_box.clear()
         self.step_forward()
         # in this case we're done
         if self.frames is None and self.position == len(self.audio_full) - 1:
@@ -354,7 +356,7 @@ class MainWindow(QMainWindow):
         """
         Frame length changed by user.
         """
-        self.frame_length = self.frameLengthBox.value()
+        self.frame_length = self.frame_length_box.value()
         # I DON'T KNOW IF THIS WILL WORK FINE WILL NEED TO TEST MORE
         self.audio_step()
         # self.soft_reset()
@@ -364,7 +366,7 @@ class MainWindow(QMainWindow):
         """
         Overlap changed by user.
         """
-        self.overlap = self.overlapBox.value()
+        self.overlap = self.overlap_box.value()
         self.audio_step()
         return
 
