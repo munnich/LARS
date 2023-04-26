@@ -271,7 +271,7 @@ class MainWindow(QMainWindow):
 
         self.fft_widget.clear()
         fftsegment = self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)]
-        if max(fftsegment) > 0:
+        if len(fftsegment) and max(fftsegment) > 0:
             self.fft_widget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
         return
 
