@@ -25,3 +25,4 @@ If you've already split the audio file into frames, you can load these as a CSV 
 
 * `syllables.jl` contains a simple implementation of the syllable detection from J. Xu, W. Liao and T. Inoue, "Speech Speed Awareness System for a Non-native Speaker," 2016 International Conference on Collaboration Technologies and Systems (CTS), Orlando, FL, USA, 2016, pp. 43-50, doi: 10.1109/CTS.2016.0027 with CSV outputting. This is WIP and currently doesn't provide the desired results.
 * `syllable_detection.py` contains a Python port of the above.
+* `noisegatesegments.jl` use a noise gate to detect segments

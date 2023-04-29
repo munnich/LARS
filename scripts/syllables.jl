@@ -2,6 +2,7 @@ module Syllables
 using DSP
 using ArgParse
 using CSV, DataFrames, FileIO, LibSndFile, SampledSignals
+using Plots
 
 intify(f) = trunc(Int, f)
 
@@ -48,7 +49,7 @@ end
 Calculate short term energy (energy produced by the vocal cord vibration).
 """
 function ste(audio; framelen=250, inc=100)
-    sum((abs.(cut_samples(audio, framelen, inc))) .^ 2; dims=2)
+    sum(cut_samples(audio, framelen, inc) .^ 2; dims=2)
 end
 
 """
@@ -127,8 +128,8 @@ function syllable_detection(stes, zcrs, thr; framelen=250, overlap=100, fs=44100
         old_n = n
         syllablelen, n = syllable_length(stes, zcrs, thr, n, N, framelen, overlap, fs)
         if syllablelen > 0
-            push!(starts, old_n)
-            push!(ends, n)
+            push!(starts, old_n * framelen)
+            push!(ends, n * framelen)
         end
     end
     if length(starts) == 0 
@@ -143,15 +144,26 @@ end
 Calculate syllables according to  J. Xu, W. Liao and T. Inoue, "Speech Speed Awareness System for a Non-native Speaker," 2016 International Conference on Collaboration Technologies and Systems (CTS), Orlando, FL, USA, 2016, pp. 43-50, doi: 10.1109/CTS.2016.0027.
 """
 function getsyllables(audio, fs, framelen=150, overlap=100)
+    if size(audio, 2) == 2 
+        audio = @. (audio[:, 1] + audio[:, 2]) / 2
+        # audio = [(audio[i, 1] + audio[i, 2]) / 2 for i in 1:size(audio, 1)]
+    end
     audio = preemphasis(audio)
     audio = normalize(audio)
     s = Threads.@spawn ste(audio, inc=overlap, framelen=framelen)
     z = Threads.@spawn zcr(audio, inc=overlap, framelen=framelen)
     stes = fetch(s)
     zcrs = fetch(z)
+    p = []
+    x = [i * framelen for i in 1:floor(length(audio) / framelen) - 1]
+    push!(p, plot(audio, title="Audio", legend=false))
+    push!(p, plot(x, stes, title="STE", legend=false))
+    push!(p, plot(x, zcrs, title="ZCR", legend=false))
+    
+    savefig(plot(p..., layout=(3, 1), link=:x), "plot.png")
     thr = Dict(
-              "ste_min" => minimum(stes),
-              "zcr_min" => minimum(zcrs),
+              "ste_min" => minimum(stes) * 2,
+              "zcr_min" => minimum(zcrs) * 2,
               "ste_max" => maxthresh(stes),
               "zcr_max" => maxthresh(zcrs)
               )
