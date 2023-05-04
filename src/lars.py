@@ -2,11 +2,13 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
 from pathlib import Path
+import warnings
 import soundfile as sf
 import numpy as np
 import pyqtgraph as pg
 import sounddevice as sd
 import pandas as pd
+from sklearn.neighbors import KDTree
 # from syllable_detection import syllable_detection
 
 class AudioParamSpinBox(QSpinBox):
@@ -23,6 +25,70 @@ class AudioParamSpinBox(QSpinBox):
         self.setSingleStep(step_size)
         self.valueChanged.connect(update_parameter)
         return
+
+
+class Learner():
+    """
+    Simple k-d tree-based prediction of value corresponding to a vector.
+    """
+    def __init__(self, vectors=np.array([]), values=np.array([]), gate=0, min_length=2000):
+        """
+        :param vectors: Any already determined vectors, usually frequency vectors.
+        :param values: Any values corresponding to aforementioned vectors.
+        :param gate: Noise gate used for filtering new vectors.
+        :param min_length: Minimum length of a non-noise segment.
+        """
+        self.vectors = vectors
+        self.values = values
+        self.gate = gate
+        self.min_length = min_length
+        self.tree = KDTree(self.vectors)
+        return
+
+    def add_vector(self, waveform, fs, value):
+        """
+        Add new vector to Learner tree.
+
+        :param waveform: Vector's waveform. Spectogram is computed after noise gate filtering.
+        :param fs: Sampling frequency.
+        :param value: Value corresponding to vector.
+        """
+        filtered = np.array([])
+        is_noise = False
+        since_noise = 0
+        # I don't know if this logic works yet
+        for i in range(len(waveform)):
+            w = waveform[i]
+            if w > self.gate:
+                np.append(filtered, w)
+                is_noise = False
+                since_noise = 0
+            else:
+                if not is_noise:
+                    if since_noise > self.min_length:
+                        is_noise = True
+                        np.append(filtered, waveform[i - since_noise])
+                        since_noise = 0
+                    else:
+                        since_noise += 1
+        if len(filtered) > fs:
+            warnings.warn("Filtered audio vector is greater than sampling frequency and will be trimmed.")
+        np.append(self.vectors, np.fft.fft(filtered, fs))
+        np.append(self.values, value)
+        self.tree = KDTree(self.vectors)
+        return
+
+    def predict(self, waveform):
+        """
+        Predict a value for given waveform. This is a tree query wrapper.
+
+        The distance returned here can be interpreted as confidence.
+
+        :param waveform: Waveform to match a value for.
+        :returns: Tuple of distance and matched value.
+        """
+        dist, i = self.tree.query(waveform, k=1)
+        return dist, self.values[i]
 
 
 class MainWindow(QMainWindow):
