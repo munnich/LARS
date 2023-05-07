@@ -1,8 +1,9 @@
 from PyQt6.QtCore import QCoreApplication, Qt
-from PyQt6.QtGui import QAction, QKeySequence
-from PyQt6.QtWidgets import QApplication, QMessageBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
+from PyQt6.QtGui import QAction, QIcon, QKeySequence
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDoubleSpinBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
 from pathlib import Path
 import warnings
+from numpy._typing import NDArray
 import soundfile as sf
 import numpy as np
 import pyqtgraph as pg
@@ -11,11 +12,27 @@ import pandas as pd
 from sklearn.neighbors import KDTree
 # from syllable_detection import syllable_detection
 
+class AudioParamDoubleSpinBox(QDoubleSpinBox):
+    """
+    Spin box for audio parameters.
+    """
+    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=0.01, param_maximum=1) -> None:
+        super().__init__()
+        self.setPrefix(prefix)
+        self.setSuffix(suffix)
+        self.setMinimum(0)
+        self.setMaximum(param_maximum)
+        self.setValue(parameter)
+        self.setSingleStep(step_size)
+        self.valueChanged.connect(update_parameter)
+        return
+
+
 class AudioParamSpinBox(QSpinBox):
     """
     Spin box for audio parameters.
     """
-    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=1000, param_maximum=int(1e6)):
+    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=1000, param_maximum=int(1e6)) -> None:
         super().__init__()
         self.setPrefix(prefix)
         self.setSuffix(suffix)
@@ -31,7 +48,11 @@ class Learner():
     """
     Simple k-d tree-based prediction of value corresponding to a vector.
     """
-    def __init__(self, vectors=np.array([]), values=np.array([]), gate=0, min_length=2000):
+    def __init__(self,
+                 vectors: NDArray[np.float64] = np.array([[]], dtype=np.float64),
+                 values: NDArray[np.string_] = np.array([], dtype=np.string_),
+                 gate: float = 0.01,
+                 min_length: int = 2000) -> None:
         """
         :param vectors: Any already determined vectors, usually frequency vectors.
         :param values: Any values corresponding to aforementioned vectors.
@@ -42,10 +63,21 @@ class Learner():
         self.values = values
         self.gate = gate
         self.min_length = min_length
-        self.tree = KDTree(self.vectors)
+        self._regenerate()
         return
 
-    def add_vector(self, waveform, fs, value):
+    def set_gate(self, value: float) -> None:
+        self.gate = value
+        return
+
+    def _regenerate(self) -> None:
+        if np.size(self.vectors, 1) < 2:
+            self.tree = None
+        else:
+            self.tree = KDTree(self.vectors)
+        return
+
+    def add_vector(self, waveform: NDArray[np.float64], fs: int, value: str) -> None:
         """
         Add new vector to Learner tree.
 
@@ -58,9 +90,9 @@ class Learner():
         since_noise = 0
         # I don't know if this logic works yet
         for i in range(len(waveform)):
-            w = waveform[i]
+            w = np.abs(waveform[i])
             if w > self.gate:
-                np.append(filtered, w)
+                filtered = np.append(filtered, w)
                 is_noise = False
                 since_noise = 0
             else:
@@ -73,12 +105,19 @@ class Learner():
                         since_noise += 1
         if len(filtered) > fs:
             warnings.warn("Filtered audio vector is greater than sampling frequency and will be trimmed.")
-        np.append(self.vectors, np.fft.fft(filtered, fs))
-        np.append(self.values, value)
-        self.tree = KDTree(self.vectors)
+        elif len(filtered) == 0:
+            return
+        filtered = waveform
+        freq = np.array([np.abs(np.fft.fft(filtered, fs))])
+        if len(self.vectors[0]) > 0:
+            self.vectors = np.concatenate((self.vectors, freq))
+        else:
+            self.vectors = freq
+        self.values = np.append(self.values, value)
+        self._regenerate()
         return
 
-    def predict(self, waveform):
+    def predict(self, waveform: NDArray[np.float64]) -> tuple[float, str]:
         """
         Predict a value for given waveform. This is a tree query wrapper.
 
@@ -87,12 +126,23 @@ class Learner():
         :param waveform: Waveform to match a value for.
         :returns: Tuple of distance and matched value.
         """
-        dist, i = self.tree.query(waveform, k=1)
-        return dist, self.values[i]
+        if self.tree is not None:
+            dist, i = self.tree.query(waveform.reshape((1, -1)), k=1)
+            return dist, self.values[int(i)]
+        return np.inf, " "
+
+    def remove_previous(self) -> None:
+        """
+        Remove the last entry's vector and value from tree.
+        """
+        self.vectors = np.delete(self.vectors, -1)
+        self.values = np.delete(self.values, -1)
+        self._regenerate()
+        return
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.title = "Label Audio Recording Segments"
@@ -109,36 +159,38 @@ class MainWindow(QMainWindow):
         self.frames = None
         self.frame_index = 0
 
+        self.learner = None
+
         # all the labels entered so far
         self.data = pd.DataFrame(columns=["Start", "End", "Labels"])
 
         self.setWindowTitle(self.abbreviation)
 
-        # layout
-        layout = QGridLayout()
+        # self.layout
+        self.layout = QGridLayout()
 
         # current file name
         self.fnameLabel = QLabel("No file selected")
 
-        layout.addWidget(self.fnameLabel, 0, 0)
+        self.layout.addWidget(self.fnameLabel, 0, 0)
 
         # parameter spin boxes
         self.frame_length_box = AudioParamSpinBox(self.frame_length, self.update_frame_length, "Frame length: ", " Samples")
-        layout.addWidget(self.frame_length_box, 1, 0)
+        self.layout.addWidget(self.frame_length_box, 1, 0)
 
         self.overlap_box = AudioParamSpinBox(self.overlap, self.update_overlap, "Overlap: ", " Samples")
-        layout.addWidget(self.overlap_box, 1, 1)
+        self.layout.addWidget(self.overlap_box, 1, 1)
 
         # progress bar
         self.progress_bar = QProgressBar(self)
-        layout.addWidget(self.progress_bar, 2, 0, 1, 2)
+        self.layout.addWidget(self.progress_bar, 2, 0, 1, 2)
 
         # plotting objects
         self.graph_widget = pg.PlotWidget()
-        layout.addWidget(self.graph_widget, 3, 0)
+        self.layout.addWidget(self.graph_widget, 3, 0)
 
         self.fft_widget = pg.PlotWidget()
-        layout.addWidget(self.fft_widget, 3, 1)
+        self.layout.addWidget(self.fft_widget, 3, 1)
 
         # entry
         self.number_of_visible_labels = 70
@@ -146,12 +198,12 @@ class MainWindow(QMainWindow):
         self.previous_text = ""
         self.previous_box = QLabel(self.previous_text)
         self.previous_box.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(self.previous_box, 4, 0)
+        self.layout.addWidget(self.previous_box, 4, 0)
 
         self.entry_box = QLineEdit()
         self.entry_box.setPlaceholderText("Current symbol(s)")
         self.entry_box.returnPressed.connect(self.set_entry)
-        layout.addWidget(self.entry_box, 4, 1)
+        self.layout.addWidget(self.entry_box, 4, 1)
 
         # menu
         menu = self.menuBar()
@@ -228,6 +280,21 @@ class MainWindow(QMainWindow):
         bwd_button.setShortcut(QKeySequence("Backspace"))
         toolbar.addAction(bwd_button)
 
+        # learning
+        learn_button = QAction(self.get_icon("SP_DriveNetIcon"), "Enable learning", self)
+        learn_button.setStatusTip("Enable frequency learning")
+        learn_button.setCheckable(True)
+        learn_button.triggered.connect(self.toggle_learning)
+        toolbar.addAction(learn_button)
+
+        self.learning_gate = 0
+        self.learning_gate_box = AudioParamDoubleSpinBox(self.learning_gate, self.update_learning_gate, "Noise gate: ", "", 0.01, 1)
+        # self.layout.addWidget(self.learning_gate_box, 5, 0)
+
+        self.distance = 5000
+        self.distance_box = AudioParamSpinBox(self.distance, self.update_distance, "Maximum distance: ", "", 50, 10000)
+        # self.layout.addWidget(self.distance_box, 5, 1)
+
         # # automatic estimation via syllable detection (doesn't really work yet)
         # estimationButton = QAction(self.get_icon("SP_BrowserReload"), "Estimate frames", self)
         # estimationButton.setStatusTip("Estimate frames")
@@ -238,13 +305,13 @@ class MainWindow(QMainWindow):
 
         # to container and set as main widget
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(self.layout)
 
         self.setCentralWidget(container)
 
         return
 
-    def soft_reset(self):
+    def soft_reset(self) -> None:
         """
         Reset everything other than variables a user would've had to change from the original.
         """
@@ -258,7 +325,7 @@ class MainWindow(QMainWindow):
         self.audio_step()
         return
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset all variables.
         """
@@ -276,14 +343,14 @@ class MainWindow(QMainWindow):
         self.previous_box.clear()
         return
 
-    def get_icon(self, name):
+    def get_icon(self, name) -> QIcon:
         """
         Get Qt icons by name.
         See https://doc.qt.io/qt-6/qstyle.html#StandardPixmap-enum for names.
         """
         return self.style().standardIcon(getattr(QStyle.StandardPixmap, name))
 
-    def on_file_tool_click(self):
+    def on_file_tool_click(self) -> None:
         """
         Open a new audio file.
         """
@@ -304,7 +371,7 @@ class MainWindow(QMainWindow):
             self.audio_step()
         return
 
-    def audio_step(self):
+    def audio_step(self) -> None:
         """
         Step forward one frame length in audio.
         """
@@ -314,16 +381,20 @@ class MainWindow(QMainWindow):
         self.play_sound()
         self.update_plots()
         self.progress_bar.setValue(int((self.position) / (len(self.audio_full) - self.frame_length) * 100))
+        if self.learner is not None:
+            dist, pred = self.learner.predict(np.abs(np.fft.fft(self.audio, n=self.fs)))
+            if dist < self.distance:
+                self.entry_box.setText(pred)
         return
 
-    def play_sound(self):
+    def play_sound(self) -> None:
         """
         Play current frame.
         """
         sd.play(self.audio, self.fs)
         return
 
-    def update_plots(self):
+    def update_plots(self) -> None:
         """
         Update the plot widgets with current frame.
         """
@@ -341,7 +412,7 @@ class MainWindow(QMainWindow):
             self.fft_widget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
         return
 
-    def step_forward(self):
+    def step_forward(self) -> None:
         """
         Step one frame forward.
         """
@@ -358,7 +429,7 @@ class MainWindow(QMainWindow):
         self.audio_step()
         return
 
-    def step_backward(self):
+    def step_backward(self) -> None:
         """
         Step one frame backwards, removing the previous text.
         """
@@ -379,7 +450,7 @@ class MainWindow(QMainWindow):
         self.data = self.data[:-1]
         return
 
-    def update_previous(self):
+    def update_previous(self) -> None:
         """
         Add new label to displayed text and trim if necessary.
         """
@@ -389,15 +460,19 @@ class MainWindow(QMainWindow):
         self.previous_box.setText(self.previous_text)
         return
 
-    def set_entry(self):
+    def set_entry(self) -> None:
         """
         Set label for current frame. If current frame is the last frame, a save prompt is opened.
         """
         self.previous_symbol = self.entry_box.text()
         if self.previous_symbol == "":
             self.previous_symbol = " "
+        # add to data
         new_row = pd.DataFrame([{"Start": self.position, "End": min(self.position + self.frame_length, len(self.audio_full)), "Labels": self.previous_symbol}])
         self.data = pd.concat([self.data, new_row])
+        # add to learner if enabled
+        if self.learner is not None:
+            self.learner.add_vector(self.audio, self.fs, self.previous_symbol)
         self.update_previous()
         self.entry_box.clear()
         self.step_forward()
@@ -406,7 +481,7 @@ class MainWindow(QMainWindow):
             self.on_done()
         return
 
-    def on_done(self):
+    def on_done(self) -> None:
         """
         Open save prompt if audio file is fully labeled.
         """
@@ -419,7 +494,7 @@ class MainWindow(QMainWindow):
             self.saveCSV()
         return
 
-    def update_frame_length(self):
+    def update_frame_length(self) -> None:
         """
         Frame length changed by user.
         """
@@ -429,7 +504,7 @@ class MainWindow(QMainWindow):
         # self.soft_reset()
         return
 
-    def update_overlap(self):
+    def update_overlap(self) -> None:
         """
         Overlap changed by user.
         """
@@ -441,7 +516,7 @@ class MainWindow(QMainWindow):
     #     print(syllable_detection(self.audio_full, self.fs))
     #     return
 
-    def about(self):
+    def about(self) -> None:
         """
         About box.
         Mostly a placeholder.
@@ -449,7 +524,7 @@ class MainWindow(QMainWindow):
         QMessageBox.about(self, "About " + self.title, f"{self.title} ({self.abbreviation}) is GNU GPLv3-licensed and was written in Python utilizing the following nonstandard libraries: NumPy, Pandas, PyQt6, pyqtgraph, scipy, sounddevice, soundfile.\n\nAuthors:\nPatrick Munnich.")
         return
 
-    def saveCSV(self):
+    def saveCSV(self) -> None:
         """
         Save labels to CSV file.
         """
@@ -467,7 +542,7 @@ class MainWindow(QMainWindow):
             self.data.to_csv(Path(filename), index=False)
         return
 
-    def load_frames(self):
+    def load_frames(self) -> None:
         """
         Load a CSV file containing frames for audio file.
         """
@@ -483,6 +558,26 @@ class MainWindow(QMainWindow):
             self.position = self.frames[0][0]
             self.frame_length = self.frames[0][1] - self.position
             self.audio_step()
+        return
+
+    def toggle_learning(self) -> None:
+        if self.learner is None:
+            self.learner = Learner()
+            self.layout.addWidget(self.learning_gate_box, 5, 0)
+            self.layout.addWidget(self.distance_box, 5, 1)
+        else:
+            self.learner = None
+            # this is hacky - should be saving a second layout
+            self.learning_gate_box.setParent(None)
+            self.distance_box.setParent(None)
+        return
+
+    def update_learning_gate(self) -> None:
+        self.learner.set_gate(self.learning_gate_box.value())
+        return
+
+    def update_distance(self) -> None:
+        self.distance = self.distance_box.value()
         return
 
 if __name__ == "__main__":
