@@ -1,3 +1,4 @@
+from typing import Callable, Union
 from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWidgets import QApplication, QMessageBox, QDoubleSpinBox, QSpinBox, QFileDialog, QLineEdit, QMainWindow, QLabel, QGridLayout, QStatusBar, QStyle, QWidget, QToolBar, QProgressBar
@@ -16,7 +17,12 @@ class AudioParamDoubleSpinBox(QDoubleSpinBox):
     """
     Spin box for audio parameters.
     """
-    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=0.01, param_maximum=1) -> None:
+    def __init__(self, parameter: float,
+                 update_parameter: Callable,
+                 prefix: str,
+                 suffix: str,
+                 step_size: float = 0.01,
+                 param_maximum: Union[float, int] = 1) -> None:
         super().__init__()
         self.setPrefix(prefix)
         self.setSuffix(suffix)
@@ -32,7 +38,12 @@ class AudioParamSpinBox(QSpinBox):
     """
     Spin box for audio parameters.
     """
-    def __init__(self, parameter, update_parameter, prefix, suffix, step_size=1000, param_maximum=int(1e6)) -> None:
+    def __init__(self, parameter: int,
+                 update_parameter: Callable,
+                 prefix: str,
+                 suffix: str,
+                 step_size: int = 1000,
+                 param_maximum: int = int(1e6)) -> None:
         super().__init__()
         self.setPrefix(prefix)
         self.setSuffix(suffix)
@@ -59,22 +70,22 @@ class Learner():
         :param gate: Noise gate used for filtering new vectors.
         :param min_length: Minimum length of a non-noise segment.
         """
-        self.vectors = vectors
-        self.values = values
-        self.gate = gate
-        self.min_length = min_length
+        self.vectors: NDArray[np.float64] = vectors
+        self.values: NDArray[np.string_] = values
+        self.gate: float = gate
+        self.min_length: int = min_length
         self._regenerate()
-        return
-
-    def set_gate(self, value: float) -> None:
-        self.gate = value
+        self.tree: Union[None, KDTree] = None
         return
 
     def _regenerate(self) -> None:
+        """
+        Regenerate k-d tree.
+        """
         if np.size(self.vectors, 1) < 2:
-            self.tree = None
+            self.tree: Union[None, KDTree] = None
         else:
-            self.tree = KDTree(self.vectors)
+            self.tree: Union[None, KDTree] = KDTree(self.vectors)
         return
 
     def add_vector(self, waveform: NDArray[np.float64], fs: int, value: str) -> None:
@@ -85,35 +96,35 @@ class Learner():
         :param fs: Sampling frequency.
         :param value: Value corresponding to vector.
         """
-        filtered = np.array([])
-        is_noise = False
-        since_noise = 0
+        filtered: NDArray[np.float64] = np.array([], dtype=np.float64)
+        is_noise: bool = False
+        since_noise: int = 0
         # I don't know if this logic works yet
         for i in range(len(waveform)):
-            w = np.abs(waveform[i])
+            w: float = np.abs(waveform[i])
             if w > self.gate:
-                filtered = np.append(filtered, w)
-                is_noise = False
-                since_noise = 0
+                filtered: NDArray[np.float64] = np.append(filtered, w)
+                is_noise: bool = False
+                since_noise: int = 0
             else:
                 if not is_noise:
                     if since_noise > self.min_length:
-                        is_noise = True
+                        is_noise: bool = True
                         np.append(filtered, waveform[i - since_noise])
-                        since_noise = 0
+                        since_noise: int = 0
                     else:
                         since_noise += 1
         if len(filtered) > fs:
             warnings.warn("Filtered audio vector is greater than sampling frequency and will be trimmed.")
         elif len(filtered) == 0:
             return
-        filtered = waveform
-        freq = np.array([np.abs(np.fft.fft(filtered, fs))])
+        filtered: NDArray[np.float64] = waveform
+        freq: NDArray[np.float64] = np.array([np.abs(np.fft.fft(filtered, fs))])
         if len(self.vectors[0]) > 0:
-            self.vectors = np.concatenate((self.vectors, freq))
+            self.vectors: NDArray[np.float64] = np.concatenate((self.vectors, freq))
         else:
-            self.vectors = freq
-        self.values = np.append(self.values, value)
+            self.vectors: NDArray[np.float64] = freq
+        self.values: NDArray[np.string_] = np.append(self.values, value)
         self._regenerate()
         return
 
@@ -135,8 +146,8 @@ class Learner():
         """
         Remove the last entry's vector and value from tree.
         """
-        self.vectors = np.delete(self.vectors, -1)
-        self.values = np.delete(self.values, -1)
+        self.vectors: NDArray[np.float64] = np.delete(self.vectors, -1)
+        self.values: NDArray[np.string_] = np.delete(self.values, -1)
         self._regenerate()
         return
 
@@ -145,16 +156,16 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
 
-        self.title = "Label Audio Recording Segments"
-        self.abbreviation = "LARS"
+        self.title: str = "Label Audio Recording Segments"
+        self.abbreviation: str = "LARS"
 
         # audio parameter defaults
-        self.fname = ""
-        self.fs = 44100
-        self.audio_full = np.array([])
-        self.audio= np.array([])
-        self.frame_length = round(self.fs / 2)
-        self.overlap = 0
+        self.fname: str = ""
+        self.fs: int = 44100
+        self.audio_full: NDArray[np.float64] = np.array([])
+        self.audio: NDArray[np.float64]= np.array([])
+        self.frame_length: int = round(self.fs / 2)
+        self.overlap: int = 0
         self.position = 0
         self.frames = None
         self.frame_index = 0
@@ -573,7 +584,7 @@ class MainWindow(QMainWindow):
         return
 
     def update_learning_gate(self) -> None:
-        self.learner.set_gate(self.learning_gate_box.value())
+        self.learner.gate = self.learning_gate_box.value()
         return
 
     def update_distance(self) -> None:
