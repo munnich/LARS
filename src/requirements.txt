@@ -6,3 +6,4 @@ scipy>=1.6.3
 sounddevice>=0.4.1
 soundfile>=0.11.0
 sklearn
+httpimport>=1.3.0

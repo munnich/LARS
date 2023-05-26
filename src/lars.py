@@ -230,8 +230,8 @@ class MainWindow(QMainWindow):
 
         # save
         save_action = QAction(self.get_icon("SP_DriveFDIcon"), "Save File", self)
-        save_action.setStatusTip("Save segment labels to CSV")
-        save_action.triggered.connect(self.saveCSV)
+        save_action.setStatusTip("Save segment labels to file")
+        save_action.triggered.connect(self.save_file)
         save_action.setShortcut(QKeySequence("Ctrl+s"))
         file_menu.addAction(save_action)
 
@@ -535,9 +535,9 @@ class MainWindow(QMainWindow):
         QMessageBox.about(self, "About " + self.title, f"{self.title} ({self.abbreviation}) is GNU GPLv3-licensed and was written in Python utilizing the following nonstandard libraries: NumPy, Pandas, PyQt6, pyqtgraph, scipy, sounddevice, soundfile.\n\nAuthors:\nPatrick Munnich.")
         return
 
-    def saveCSV(self) -> None:
+    def save_file(self) -> None:
         """
-        Save labels to CSV file.
+        Save labels to CSV or WAV file.
         """
         # need something here
         # if not self.fname:
@@ -545,12 +545,20 @@ class MainWindow(QMainWindow):
             self,
             "Save File",
             str(Path(self.fname).with_suffix(".csv")),
-            "Comma-separated values (*.csv)"
+            "Comma-separated values (*.csv *.wav)"
         )
         if filename:
-            if not filename.endswith(".csv"):
+            if filename.endswith(".csv"):
+                self.data.to_csv(Path(filename), index=False)
+            elif filename.endswith(".wav"):
+                import httpimport
+                with httpimport.remote_repo("https://gist.github.com/josephernest/3f22c5ed5dabf1815f16efa8fa53d476/raw/ccea34c6b836fd85c9c0c82d34ffbd02313b30b0"):
+                    import wavfile
+                markers = [{"position": self.data.iloc[i]["Start"], "label": self.data.iloc[i]["Labels"]} for i in range(self.data.shape[0])]
+                wavfile.write(Path(filename), self.fs, self.audio_full, markers=markers)
+            else:
                 filename += ".csv"
-            self.data.to_csv(Path(filename), index=False)
+                self.data.to_csv(Path(filename), index=False)
         return
 
     def load_frames(self) -> None:
