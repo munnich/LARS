@@ -169,6 +169,7 @@ class MainWindow(QMainWindow):
         self.position = 0
         self.frames = None
         self.frame_index = 0
+        self.fft_display_func = np.abs
 
         self.learner = None
 
@@ -219,6 +220,7 @@ class MainWindow(QMainWindow):
         # menu
         menu = self.menuBar()
         file_menu = menu.addMenu("File")
+        settings_menu = menu.addMenu("Settings")
         help_menu = menu.addMenu("Help")
 
         # file picking
@@ -251,6 +253,18 @@ class MainWindow(QMainWindow):
         quit_action.triggered.connect(self.close)
         quit_action.setShortcut(QKeySequence("Ctrl+q"))
         file_menu.addAction(quit_action)
+
+        # fft display
+        fft_menu = settings_menu.addMenu("FFT Plot")
+        self.fft_abs_action = QAction("Magnitude", self)
+        self.fft_abs_action.triggered.connect(self.set_fft_abs)
+        self.fft_abs_action.setCheckable(True)
+        self.fft_abs_action.setChecked(True)
+        fft_menu.addAction(self.fft_abs_action)
+        self.fft_angle_action = QAction("Phase", self)
+        self.fft_angle_action.triggered.connect(self.set_fft_angle)
+        self.fft_angle_action.setCheckable(True)
+        fft_menu.addAction(self.fft_angle_action)
 
         # about
         about_action = QAction(f"About {self.abbreviation}", self)
@@ -420,7 +434,8 @@ class MainWindow(QMainWindow):
         self.fft_widget.clear()
         fftsegment = self.audio_full[self.position:min(len(self.audio_full), self.position + self.frame_length)]
         if len(fftsegment) and max(fftsegment) > 0:
-            self.fft_widget.plot(np.abs(np.fft.fft(fftsegment, n=self.fs)).flatten()[:round(self.fs / 2)])
+            fft = np.fft.fft(fftsegment, n=self.fs)
+            self.fft_widget.plot(self.fft_display_func(fft).flatten()[:round(self.fs / 2)])
         return
 
     def step_forward(self) -> None:
@@ -597,6 +612,18 @@ class MainWindow(QMainWindow):
 
     def update_distance(self) -> None:
         self.distance = self.distance_box.value()
+        return
+
+    def set_fft_abs(self) -> None:
+        self.fft_display_func = np.abs
+        self.fft_angle_action.setChecked(False)
+        self.update_plots()
+        return
+
+    def set_fft_angle(self) -> None:
+        self.fft_display_func = np.angle
+        self.fft_abs_action.setChecked(False)
+        self.update_plots()
         return
 
 if __name__ == "__main__":
